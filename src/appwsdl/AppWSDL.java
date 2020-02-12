@@ -1,11 +1,18 @@
 package appwsdl;
 
-public class AppWSDL
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
+public class AppWSDL 
 {
-    public static void main(String[] args)
+
+    public static void main(String[] args) throws FileNotFoundException, IOException 
     {
-        Client client = new Client();
-        client.send();
-        client.close();
+        Client op = new Client();
+        op.operazione("add");
+        op.operazione("sub");
+        op.operazione("mul");
+        op.operazione("div");
+        op.operazione("pow");
     }
 }

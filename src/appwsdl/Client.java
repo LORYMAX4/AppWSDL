@@ -1,71 +1,91 @@
 package appwsdl;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class Client
+public class Client 
 {
-    private Socket socket;
-    private PrintWriter out;
-    private Scanner in;
+    private Socket s;
+    private Scanner input;
+    private PrintWriter output;
+    private BufferedOutputStream dataOut;
     
-    public Client ()
+    private byte[] readFileData(File file, int fileLength) throws IOException 
     {
-        try
-        {        
-            socket = new Socket("websrv.cs.fsu.edu", 80);
-            out = new PrintWriter(socket.getOutputStream(), true);
-        }
-        catch(Exception e)
+        FileInputStream fileIn = null;
+        byte[] fileData = new byte[fileLength];
+
+        try 
         {
-            System.out.println("Errore: "+e);
+                fileIn = new FileInputStream(file);
+                fileIn.read(fileData);
+        } 
+        finally 
+        {
+                if (fileIn != null)
+                {
+                        fileIn.close();
+                }
         }
+        return fileData;
     }
-    
-    public void send ()
+     
+    public boolean operazione(String op) throws IOException
     {
         try
         {
-            out.println("POST /~engelen/calcserver.cgi HTTP/1.1");
-            out.println("Host: websrv.cs.fsu.edu");
-            out.println("Connection: Keep-Alive");
-            out.println("Content-Type: text/xml; charset=utf-8");
-            out.println("<soapenv:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:urn=\"urn:calc\">\n" +
-                        "<soapenv:Header/>\n" +
-                        "<soapenv:Body>\n" +
-                        "<urn:add soapenv:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">\n" +
-                        "<a xsi:type=\"xsd:double\">?</a>\n" +
-                        "<b xsi:type=\"xsd:double\">?</b>\n" +
-                        "</urn:add>\n" +
-                        "</soapenv:Body>\n" +
-                        "</soapenv:Envelope>");
-            out.println();
-            out.flush();
-            System.out.println("xml: ");
-            Scanner in = new Scanner(socket.getInputStream());
-            String ln;
-            while(in.hasNext())
-            {
-                ln = in.nextLine();
-                System.out.println(ln);
-            } 
-        }
-        catch(Exception e)
+            s = new Socket("websrv.cs.fsu.edu", 80);
+            input = new Scanner(s.getInputStream(), "UTF-8");
+            output = new PrintWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"), true);
+            dataOut = new BufferedOutputStream(s.getOutputStream());
+        }catch(Exception e)
+        {}
+        
+        File file = null;
+        switch(op)
         {
-            System.out.println("Errore: "+e);
+            case "add":
+                file = new File("add.xml");
+                break;
+            case "sub":
+                file = new File("sub.xml");
+                break;
+            case "mul":
+                file = new File("mul.xml");
+                break;
+            case "div":
+                file = new File("div.xml");
+                break;
+            case "pow":
+                file = new File("pow.xml");
+                break;
+            default:
+                return false;
         }
-    }
-    
-    public void close ()
-    {
-        try
+        byte[] fileData = readFileData(file, (int)file.length());
+
+        output.println("POST /~engelen/calcserver.cgi HTTP/1.1");
+        output.println("Host: websrv.cs.fsu.edu");
+        output.println("Content-Type: text/xml");
+        output.println("Content-Length: "+file.length());
+        output.println("");
+        output.flush();
+        dataOut.write(fileData,0,(int)file.length());    
+        dataOut.flush();
+        
+        while(!input.hasNextLine())
+        {}
+        while(input.hasNextLine())
         {
-            socket.close();
+            System.out.println(input.nextLine());
         }
-        catch(Exception e)
-        {
-            System.out.println("Errore: "+e);
-        }
+        System.out.println("");
+        return true;
     }
 }
